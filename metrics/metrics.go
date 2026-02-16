@@ -1,12 +1,20 @@
 // Package metrics provides minimal OpenTelemetry metrics helpers.
 // Kept minimal per design; services can extend with custom meters.
+// Does not import go.opentelemetry.io/otel so the auto/sdk chain is never pulled in.
 package metrics
 
 import (
 	"context"
+	"sync"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
+)
+
+var (
+	mu        sync.RWMutex
+	meter     metric.Meter
+	meterName = "mhc-infra-observability"
 )
 
 // Counter is a minimal counter helper.
@@ -14,10 +22,27 @@ type Counter struct {
 	counter metric.Int64Counter
 }
 
+// SetMeter sets the meter used by NewCounter. Must be called from observability Init
+// after the global MeterProvider is set (if any). If never set, NewCounter uses a noop meter.
+func SetMeter(m metric.Meter) {
+	mu.Lock()
+	defer mu.Unlock()
+	meter = m
+}
+
+func getMeter() metric.Meter {
+	mu.RLock()
+	m := meter
+	mu.RUnlock()
+	if m != nil {
+		return m
+	}
+	return noop.NewMeterProvider().Meter(meterName)
+}
+
 // NewCounter creates a counter with the given name and optional description.
 func NewCounter(name, description string) (*Counter, error) {
-	meter := otel.Meter("mhc-infra-observability")
-	c, err := meter.Int64Counter(name,
+	c, err := getMeter().Int64Counter(name,
 		metric.WithDescription(description),
 	)
 	if err != nil {

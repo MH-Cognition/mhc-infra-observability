@@ -12,17 +12,19 @@ import (
 	"github.com/MH-Cognition/mhc-infra-observability/logging"
 	"github.com/MH-Cognition/mhc-infra-observability/metrics"
 	"github.com/MH-Cognition/mhc-infra-observability/tracing"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 )
 
-// Init initializes the observability stack: tracer, propagator, logger.
+// Init initializes the observability stack (tracing, propagator). Uses the single Resource
+// created by the service via NewResource. The service must call NewResource once and pass
+// the same res to Init; do not create resources elsewhere.
 // Returns a shutdown function that must be called before process exit (e.g., in main's defer).
-func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error, error) {
-	shutdown, err := tracing.Init(ctx, cfg)
+func Init(ctx context.Context, res *resource.Resource, cfg *config.Config) (func(context.Context) error, error) {
+	shutdown, err := tracing.Init(ctx, res, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("init tracing: %w", err)
 	}
@@ -31,10 +33,9 @@ func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error,
 
 // StartSpan starts a new span as a child of the current span in ctx.
 // Returns the new context (with span) and the span. Caller must call span.End() when done.
-// Safe to call when no tracer is configured (returns noop span).
+// Must be called only after Init; otherwise a noop tracer is used (otel global is never touched).
 func StartSpan(ctx context.Context, name string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	tracer := otel.Tracer("mhc-infra-observability")
-	return tracer.Start(ctx, name, opts...)
+	return tracing.Tracer().Start(ctx, name, opts...)
 }
 
 // Logger returns the trace-aware structured logger.

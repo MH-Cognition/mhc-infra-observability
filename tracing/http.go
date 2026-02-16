@@ -7,7 +7,6 @@ import (
 
 	"github.com/MH-Cognition/mhc-infra-observability/propagation"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -22,7 +21,7 @@ func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := propagation.ExtractHTTP(r.Context(), r.Header)
 
-		tracer := otel.Tracer(tracerName)
+		tracer := Tracer()
 		spanName := spanNamePrefix + r.Method + " " + r.URL.Path
 		if spanName == spanNamePrefix+" " {
 			spanName = spanNamePrefix + r.URL.Path

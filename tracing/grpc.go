@@ -5,7 +5,6 @@ import (
 
 	"github.com/MH-Cognition/mhc-infra-observability/propagation"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -27,7 +26,7 @@ func UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 		md, _ := metadata.FromIncomingContext(ctx)
 		ctx = propagation.ExtractGrpc(ctx, md)
 
-		tracer := otel.Tracer(tracerName)
+		tracer := Tracer()
 		ctx, span := tracer.Start(ctx, info.FullMethod,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(
@@ -62,7 +61,7 @@ func UnaryClientInterceptor() grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		opts ...grpc.CallOption,
 	) error {
-		tracer := otel.Tracer(tracerName)
+		tracer := Tracer()
 		ctx, span := tracer.Start(ctx, method,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(

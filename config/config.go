@@ -10,6 +10,9 @@ type Config struct {
 	// Env: OTEL_SERVICE_NAME
 	ServiceName string
 
+	// ServiceVersion is the service version (optional). Env: OTEL_SERVICE_VERSION
+	ServiceVersion string
+
 	// Environment is the deployment environment (e.g., "dev", "staging", "prod").
 	// Env: OTEL_ENVIRONMENT
 	Environment string
@@ -27,6 +30,8 @@ func Load() *Config {
 		serviceName = "unknown-service"
 	}
 
+	serviceVersion := os.Getenv("OTEL_SERVICE_VERSION")
+
 	env := os.Getenv("OTEL_ENVIRONMENT")
 	if env == "" {
 		env = "development"
@@ -38,8 +43,9 @@ func Load() *Config {
 	}
 
 	return &Config{
-		ServiceName:  serviceName,
-		Environment:  env,
-		OtelEndpoint: endpoint,
+		ServiceName:    serviceName,
+		ServiceVersion: serviceVersion,
+		Environment:     env,
+		OtelEndpoint:   endpoint,
 	}
 }

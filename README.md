@@ -21,7 +21,7 @@ A **centralized infrastructure library** for observability in Go microservices. 
 
 ```go
 // In your service's go.mod
-require mhc-infra-observability v0.1.0
+require github.com/MH-Cognition/mhc-infra-observability v0.1.2
 ```
 
 ### 2. Initialize in main.go
@@ -45,7 +45,12 @@ func main() {
     ctx := context.Background()
     cfg := config.Load()
 
-    shutdown, err := observability.Init(ctx, cfg)
+    // Create exactly ONE OpenTelemetry Resource; pass it to Init.
+    res, err := observability.NewResource(ctx, cfg)
+    if err != nil {
+        log.Fatalf("observability resource: %v", err)
+    }
+    shutdown, err := observability.Init(ctx, res, cfg)
     if err != nil {
         log.Fatalf("observability init: %v", err)
     }
@@ -153,6 +158,7 @@ defer span.End()
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OTEL_SERVICE_NAME` | Service name in traces | `unknown-service` |
+| `OTEL_SERVICE_VERSION` | Service version (optional) | — |
 | `OTEL_ENVIRONMENT` | Deployment environment | `development` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint | `localhost:4317` |
 | `LOG_LEVEL` | Log level (debug, info, error) | `info` |
@@ -172,9 +178,17 @@ defer span.End()
 ```
 mhc-infra-observability/
 ├── config/         # Config from env
-├── observability/  # Public facade (import this)
+├── observability/  # Public facade (import this); includes NewResource (single OTEL Resource)
 ├── tracing/        # OTel tracing + HTTP/gRPC/Kafka middleware
 ├── logging/        # Structured trace-aware logger
 ├── metrics/        # Basic counter helper
 └── propagation/    # Trace context propagation
 ```
+
+## Resource and schema (no conflicts)
+
+Exactly **one** OpenTelemetry Resource is created per process via `observability.NewResource(ctx, cfg)`. It uses a single schema version (semconv v1.37.0). The same Resource is passed to `observability.Init(ctx, res, cfg)`. Do not create resources in tracing, metrics, or logging; do not use `resource.Default()` or `resource.Merge()` elsewhere.
+
+## Manual OTEL only (v0.1.2+)
+
+This library uses **strict manual initialization** only. `go.opentelemetry.io/auto/sdk` is **not** in the dependency graph. The service must call `NewResource` and then `Init(ctx, res, cfg)` before any HTTP/gRPC handlers or `StartSpan` run. Tracers are obtained from the TracerProvider set in `Init`; the global `otel.Tracer()` is never used before the provider is set.

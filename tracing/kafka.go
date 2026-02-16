@@ -5,7 +5,6 @@ import (
 
 	"github.com/MH-Cognition/mhc-infra-observability/propagation"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -25,8 +24,7 @@ func ExtractKafkaContext(ctx context.Context, headers map[string]string) context
 // StartKafkaConsumerSpan starts a span for a Kafka message consumer.
 // Call after ExtractKafkaContext to create a child span for processing.
 func StartKafkaConsumerSpan(ctx context.Context, topic, partition string, offset int64) (context.Context, trace.Span) {
-	tracer := otel.Tracer(tracerName)
-	return tracer.Start(ctx, "kafka.consume",
+	return Tracer().Start(ctx, "kafka.consume",
 		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(
 			attribute.String("messaging.system", "kafka"),
@@ -40,8 +38,7 @@ func StartKafkaConsumerSpan(ctx context.Context, topic, partition string, offset
 // StartKafkaProducerSpan starts a span for producing a Kafka message.
 // Use the returned context when calling InjectKafkaHeaders.
 func StartKafkaProducerSpan(ctx context.Context, topic string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(tracerName)
-	return tracer.Start(ctx, "kafka.produce",
+	return Tracer().Start(ctx, "kafka.produce",
 		trace.WithSpanKind(trace.SpanKindProducer),
 		trace.WithAttributes(
 			attribute.String("messaging.system", "kafka"),
