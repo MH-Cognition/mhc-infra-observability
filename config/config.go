@@ -2,7 +2,10 @@
 // for the observability library. No hardcoded values; all settings come from env.
 package config
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 // Config holds observability configuration loaded from environment variables.
 type Config struct {
@@ -17,7 +20,7 @@ type Config struct {
 	// Env: OTEL_ENVIRONMENT
 	Environment string
 
-	// OtelEndpoint is the OTLP collector endpoint for trace/metric export (e.g., "localhost:4317").
+	// OtelEndpoint is the OTLP collector endpoint for trace/metric export (e.g., "localhost:4317" or "http://host:4317"; scheme is stripped for gRPC).
 	// Env: OTEL_EXPORTER_OTLP_ENDPOINT
 	OtelEndpoint string
 }
@@ -41,6 +44,9 @@ func Load() *Config {
 	if endpoint == "" {
 		endpoint = "localhost:4317"
 	}
+	// gRPC dial expects host:port; strip http(s):// so "http://host:4317" works.
+	endpoint = strings.TrimPrefix(endpoint, "https://")
+	endpoint = strings.TrimPrefix(endpoint, "http://")
 
 	return &Config{
 		ServiceName:    serviceName,
